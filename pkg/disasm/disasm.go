@@ -54,7 +54,7 @@ func (dis *Disasm) InstAt(index uint) (string, error) {
     opcode := uint16(dis.romData[index]) << 8 +
               uint16(dis.romData[index + 1])
 
-    return fmt.Sprintf("%#04x", opcode), nil
+    return ParseOpcode(opcode), nil
 }
 
 
