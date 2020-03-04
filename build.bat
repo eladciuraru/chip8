@@ -12,7 +12,15 @@ if not exist "%BuildDir%" (
 
 pushd %BuildDir%
 
-echo [*] Building disasm
-go build "%SourceDir%\disasm"
+:: Check first parameter
+if "%ToolName%"=="" (
+    for /d %%n in ("%SourceDir%\*") do (
+        echo [*] Building %%~nn
+        go build %%n
+    )
+) else (
+    echo [*] Building %ToolName%
+    go build "%SourceDir%\%ToolName%"
+)
 
 popd
