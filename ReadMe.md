@@ -28,4 +28,5 @@ To build a specific tool, just pass the name of the tool as parameter to the bui
 When no parameter is passed, the default is to build all the tools.
 
 __Note__:
-Development was done with Go version 1.14, but will probably work with older versions.
+Development was done with Go version 1.14,
+and the code uses `%w` format string to wrap errors, which means that older Go version that doesn't support this will not work with the code.

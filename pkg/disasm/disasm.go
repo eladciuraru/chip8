@@ -12,28 +12,67 @@ const InstructionSize uint = 0x02
 
 
 type Disasm struct {
-    romData []byte
+    romData  []byte
+    baseAddr uint
+    labels   bool
+    format   string
 }
 
 
-func New(rom []byte) *Disasm {
-    return &Disasm{
-        romData: rom,
+type Option func(*Disasm)
+
+
+func WithAddress(addr uint) Option {
+    return func(dis *Disasm) {
+        dis.baseAddr = addr
     }
 }
 
 
-func FromReader(reader io.Reader) (*Disasm, error) {
+func WithLabels(dis *Disasm) {
+    dis.labels = true
+}
+
+
+func WithFormat(format string) Option {
+    return func(dis *Disasm) {
+        dis.format = format
+    }
+}
+
+
+func New(rom []byte, options ...Option) *Disasm {
+    const (
+		defaultFormat  = "addr mne op1 op2"
+		defaultAddress = 0x200
+    )
+
+    disasm := &Disasm{
+        baseAddr: defaultAddress,
+        format:   defaultFormat,
+        romData:  rom,
+    }
+
+    // This pattern was taken from https://dave.cheney.net/2014/10/17/functional-options-for-friendly-apis
+    for _, option := range options {
+        option(disasm)
+    }
+
+    return disasm
+}
+
+
+func FromReader(reader io.Reader, options ...Option) (*Disasm, error) {
     romData, err := ioutil.ReadAll(reader)
     if err != nil {
         return nil, fmt.Errorf("failed to read all: %w", err)
     }
 
-    return New(romData), nil
+    return New(romData, options...), nil
 }
 
 
-func FromFile(filename string) (*Disasm, error) {
+func FromFile(filename string, options ...Option) (*Disasm, error) {
     // Maybe it is better to just use ioutil.ReadFile instead of reusing
     // `FromReader` function
     file, err := os.Open(filename)
@@ -42,7 +81,7 @@ func FromFile(filename string) (*Disasm, error) {
     }
     defer file.Close()
 
-    return FromReader(file)
+    return FromReader(file, options...)
 }
 
 
