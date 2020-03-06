@@ -1,10 +1,11 @@
 package main
 
 import (
-    "fmt"
-    "flag"
-    "os"
-    "github.com/eladciuraru/chip8/pkg/disasm"
+	"flag"
+	"fmt"
+	"os"
+
+	"github.com/eladciuraru/chip8/pkg/disasm"
 )
 
 
@@ -51,14 +52,17 @@ func parseArgs() Arguments {
 }
 
 
-func fromArgsToOptions(args Arguments) []disasm.Option {
+func argsToOptions(args Arguments) []disasm.Option {
     var disOptions []disasm.Option
+
     if args.base != 0 {
         disOptions = append(disOptions, disasm.WithAddress(args.base))
     }
+
     if args.format == "" {
         disOptions = append(disOptions, disasm.WithFormat(args.format))
     }
+
     if args.labels {
         disOptions = append(disOptions, disasm.WithLabels)
     }
@@ -70,7 +74,7 @@ func fromArgsToOptions(args Arguments) []disasm.Option {
 func main() {
     args := parseArgs()
 
-    dis, err := disasm.FromFile(args.path, fromArgsToOptions(args)...)
+    dis, err := disasm.FromFile(args.path, argsToOptions(args)...)
     if err != nil {
         panic(err)
     }

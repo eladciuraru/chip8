@@ -5,6 +5,8 @@ set "ParentDir=%~dp0"
 set "BuildDir=%ParentDir%\build"
 set "SourceDir=%ParentDir%\cmd"
 
+set "ToolName=%~1"
+
 if not exist "%BuildDir%" (
     echo [*] Creating %BuildDir%
     mkdir "%BuildDir%"
