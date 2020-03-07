@@ -1,11 +1,8 @@
 package main
 
 import (
-	"fmt"
-
 	"github.com/eladciuraru/chip8/pkg/machine"
 )
-
 
 func main() {
     vm, err := machine.FromFile("roms/maze.bin")
@@ -13,5 +10,5 @@ func main() {
         panic(err)
     }
 
-    fmt.Println(vm)
+    vm.Start()
 }

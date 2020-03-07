@@ -8,7 +8,6 @@ import (
 	"github.com/eladciuraru/chip8/pkg/disasm"
 )
 
-
 type Arguments struct {
     path   string
     base   uint

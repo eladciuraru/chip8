@@ -10,11 +10,11 @@ and my interest in writing emulators.
 
 ### Existing Tools
 * __`disasm`__ - Disassmbler of the CHIP8 instruction set
+* __`machine`__ - Virtual Machine
 
 ### Planned Tools
 * __`casm`__ - Assembler
 * __`cdbg`__ - Debugger
-* __`cvm`__ - Virtual Machine
 
 __Note__:
 All the tools, will be also available as a package with an easy to use API.

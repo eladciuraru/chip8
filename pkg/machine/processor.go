@@ -1,7 +1,11 @@
 package machine
 
+import (
+	"fmt"
+)
+
 type Processor struct {
-    bus Bus
+    Bus
 
     // Registers
     V  [16]byte  // General registers
@@ -16,9 +20,36 @@ type Processor struct {
 }
 
 
-func NewProcessor(bus Bus, startAddr uint16) *Processor {
+func NewProcessor(bus Bus) *Processor {
     return &Processor{
-        bus: bus,
-        PC:  startAddr,
+        Bus: bus,
+        PC:  uint16(RomStartAddress),
     }
+}
+
+
+func (cpu *Processor) Cycle() {
+    opcode := cpu.FetchOpcode()
+
+    cpu.Execute(opcode)
+}
+
+
+func (cpu *Processor) FetchOpcode() uint16 {
+    opcode := uint16(cpu.Read(cpu.PC)) << 8 +
+              uint16(cpu.Read(cpu.PC + 1))
+    cpu.PC += uint16(InstructionSize)
+
+    return opcode
+}
+
+
+func (cpu *Processor) Execute(opcode uint16) {
+    executor, ok := executorsMap[DecodeOpcode(opcode)]
+    if !ok {
+        // TODO: Remove this when it is decided how to handle this
+        panic(fmt.Errorf("Unknown opcode found"))
+    }
+
+    executor(cpu, opcode)
 }

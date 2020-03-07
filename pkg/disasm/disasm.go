@@ -1,14 +1,15 @@
 package disasm
 
 import (
-    "io/ioutil"
-    "os"
-    "fmt"
-    "io"
+	"fmt"
+	"io"
+	"io/ioutil"
+	"os"
+
+	"github.com/eladciuraru/chip8/pkg/machine"
 )
 
-
-const InstructionSize uint = 0x02
+const InstructionSize uint = machine.InstructionSize
 
 
 type Disasm struct {

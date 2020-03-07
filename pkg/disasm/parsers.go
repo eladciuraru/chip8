@@ -2,7 +2,6 @@ package disasm
 
 import "fmt"
 
-
 func ParseOpcode(opcode uint16) string {
     parser, ok := parsersMap[decodeOpcode(opcode)]
     if !ok {

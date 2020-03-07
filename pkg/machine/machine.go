@@ -7,11 +7,13 @@ import (
 	"os"
 )
 
-
 const (
+    InstructionSize uint = 0x02
     MemorySize      uint = 0x1000
+
     RomMaxSize      uint = 0x0D00
     RomStartAddress uint = 0x0200
+
     VideoWidth      uint = 64
     VideoHeight     uint = 32
 )
@@ -24,10 +26,15 @@ const (
 // 0x0F00 - 0x0FFF : Display buffer
 type VirtualMachine struct {
     cpu      *Processor
-    bus      Bus
     memory   [MemorySize]byte
     video    [VideoWidth][VideoHeight]bool
     keyboard [16]bool
+}
+
+
+type Bus interface {
+    Read(uint16) byte
+    Write(uint16, byte)
 }
 
 
@@ -35,7 +42,7 @@ func New(rom []byte) *VirtualMachine {
     vm := &VirtualMachine{}
 
     // Share the bus with the CPU
-    vm.cpu = NewProcessor(vm.bus, uint16(RomStartAddress))
+    vm.cpu = NewProcessor(vm)
 
     // Load rom data into ram
     limitCopy := minUint(uint(len(rom)), RomMaxSize)
@@ -70,12 +77,28 @@ func FromFile(filename string) (*VirtualMachine, error) {
 }
 
 
-// Why isn't there a builtin for this, seems stupid that a 
-// high level language like go has many things like this missing
-func minUint(a, b uint) uint {
-    if a <= b {
-        return a
-    } else {
-        return b
+func (vm *VirtualMachine) fixAddress(addr uint16) uint16 {
+    // Address should only use 12 bits, so only look at lowest 12 bits.
+    // This has the effect of looping around the address space in case of
+    // address bigger than 12 bits
+    return addr & 0x0FFF
+}
+
+
+func (vm *VirtualMachine) Read(addr uint16) byte {
+    return vm.memory[vm.fixAddress(addr)]
+}
+
+
+func (vm *VirtualMachine) Write(addr uint16, data byte) {
+    vm.memory[vm.fixAddress(addr)] = data
+}
+
+
+func (vm *VirtualMachine) Start() {
+    for i := 0; i < 0x11; i++ {
+        vm.cpu.Cycle()
     }
+
+    fmt.Println("Finished")
 }
