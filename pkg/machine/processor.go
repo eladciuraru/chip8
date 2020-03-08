@@ -38,7 +38,7 @@ func (cpu *Processor) Cycle() {
 func (cpu *Processor) FetchOpcode() uint16 {
     opcode := uint16(cpu.Read(cpu.PC)) << 8 +
               uint16(cpu.Read(cpu.PC + 1))
-    cpu.PC += uint16(InstructionSize)
+    cpu.AdvancePC()
 
     return opcode
 }
@@ -52,4 +52,10 @@ func (cpu *Processor) Execute(opcode uint16) {
     }
 
     executor(cpu, opcode)
+}
+
+
+func (cpu *Processor) AdvancePC() {
+    // TODO: Handle edge case
+    cpu.PC += uint16(InstructionSize)
 }

@@ -14,8 +14,11 @@ const (
     RomMaxSize      uint = 0x0D00
     RomStartAddress uint = 0x0200
 
-    VideoWidth      uint = 64
-    VideoHeight     uint = 32
+    VideoStartAddress uint = 0x0F00
+    VideoWidth        uint = 64
+    VideoHeight       uint = 32
+    VideoSize         uint = VideoHeight * VideoWidth
+    VideoPixelSize    uint = 8
 )
 
 
@@ -27,7 +30,7 @@ const (
 type VirtualMachine struct {
     cpu      *Processor
     memory   [MemorySize]byte
-    video    [VideoWidth][VideoHeight]bool
+    video    [VideoSize]bool
     keyboard [16]bool
 }
 
@@ -91,14 +94,25 @@ func (vm *VirtualMachine) Read(addr uint16) byte {
 
 
 func (vm *VirtualMachine) Write(addr uint16, data byte) {
-    vm.memory[vm.fixAddress(addr)] = data
+    addr = vm.fixAddress(addr)
+    vm.memory[addr] = data
+
+    // We want to copy changes to the video buffer,
+    // from the RAM to our bool video buffer,
+    // since this will be easier for the user of this pacakge to handle.
+    // a different approach is to generate this video buffer per request
+    if addr >= uint16(VideoStartAddress) {
+        index := (uint(addr) - VideoStartAddress) / VideoPixelSize
+        data  := data
+        for offset := uint(0); offset < VideoPixelSize; offset++ {
+            vm.video[index + offset] = data & 1 == 1
+            
+            data >>= 1
+        }
+    }
 }
 
 
 func (vm *VirtualMachine) Start() {
-    for i := 0; i < 0x11; i++ {
-        vm.cpu.Cycle()
-    }
 
-    fmt.Println("Finished")
 }
