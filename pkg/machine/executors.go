@@ -24,11 +24,11 @@ var executorsMap = map[uint16]executor{
     // 0x8007: subnExecutor,
     // 0x800E: shlExecutor,
     0x9000: sneExecutor,
-    // 0xA000: ldExecutor,
-    // 0xB000: jmpExecutor,
-    // 0xC000: rndExecutor,
+    0xA000: ldExecutor,
+    0xB000: jmpExecutor,
+    0xC000: rndExecutor,
     // 0xD000: drwExecutor,
-    // 0xE09E: skpExecutor,
+    0xE09E: skpExecutor,
     // 0xE0A1: sknpExecutor,
     // 0xF007: ldExecutor,
     // 0xF00A: ldExecutor,
@@ -43,10 +43,7 @@ var executorsMap = map[uint16]executor{
 
 
 func clsExecutor(cpu *Processor, opcode uint16) {
-    var i uint
-    for i = 0; i < (VideoSize / VideoPixelSize); i++ {
-        addr := uint16(VideoStartAddress + i)
-
+    for addr := MemoryDisplayAddr; addr < MemorySize; addr++ {
         cpu.Write(addr, 0)
     }
 }
@@ -61,7 +58,16 @@ func retExecutor(cpu *Processor, opcode uint16) {
 
 
 func jmpExecutor(cpu *Processor, opcode uint16) {
-    cpu.PC = DecodeArg3(opcode)
+    var newPC uint16
+    switch DecodeMajor(opcode) {
+        case 0x1000:
+            newPC = DecodeArg3(opcode)
+
+        case 0xB000:
+            newPC = uint16(cpu.V[0]) + DecodeArg3(opcode)
+    }
+
+    cpu.PC = newPC
 }
 
 
@@ -116,10 +122,16 @@ func sneExecutor(cpu *Processor, opcode uint16) {
 
 
 func ldExecutor(cpu *Processor, opcode uint16) {
-    op1 := DecodeArg1(opcode)
-    op2 := DecodeArg2(opcode)
+    switch DecodeMajor(opcode) {
+        case 0x6000:
+            op1 := DecodeArg1(opcode)
+            op2 := DecodeArg2(opcode)
 
-    cpu.V[op1] = byte(op2)
+            cpu.V[op1] = byte(op2)
+
+        case 0xA000:
+            cpu.I = DecodeArg3(opcode)
+    }
 }
 
 
@@ -128,4 +140,17 @@ func addExecutor(cpu *Processor, opcode uint16) {
     op2 := DecodeArg2(opcode)
 
     cpu.V[op1] += byte(op2)
+}
+
+
+func rndExecutor(cpu *Processor, opcode uint16) {
+    op1 := DecodeArg1(opcode)
+    op2 := DecodeArg2(opcode)
+
+    cpu.V[op1] = randomByte() & byte(op2)
+}
+
+
+func skpExecutor(cpu *Processor, opcode uint16) {
+
 }

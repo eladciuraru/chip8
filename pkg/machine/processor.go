@@ -23,7 +23,7 @@ type Processor struct {
 func NewProcessor(bus Bus) *Processor {
     return &Processor{
         Bus: bus,
-        PC:  uint16(RomStartAddress),
+        PC:  MemoryRomAddr,
     }
 }
 

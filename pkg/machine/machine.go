@@ -9,28 +9,27 @@ import (
 
 const (
     InstructionSize uint = 0x02
-    MemorySize      uint = 0x1000
 
-    RomMaxSize      uint = 0x0D00
-    RomStartAddress uint = 0x0200
+    // Memory map related consts
+    MemorySize         uint16 = 0x1000
+    MemoryRomAddr      uint16 = 0x0200
+    MemoryStackAddr    uint16 = 0x0EA0
+    MemoryWorkAreaAddr uint16 = 0x0ED0
+    MemoryKeyboardAddr uint16 = 0x0EF0
+    MemoryDisplayAddr  uint16 = 0x0F00
 
-    VideoStartAddress uint = 0x0F00
-    VideoWidth        uint = 64
-    VideoHeight       uint = 32
-    VideoSize         uint = VideoHeight * VideoWidth
-    VideoPixelSize    uint = 8
+    // Display realted consts
+    DisplayWidth      uint = 64
+    DisplayHeight     uint = 32
+    DisplaySize       uint = DisplayHeight * DisplayWidth
+    DisplayMemorySize uint = uint(MemorySize - MemoryDisplayAddr)
+    DisplayPixelWidth uint = 8
 )
 
-
-// Memory Map:
-// 0x0000 - 0x01FF : Reserved for interpreter
-// 0x0200 - 0x0E9F : Program / Data space
-// 0x0EA0 - 0x0EFF : Stack space
-// 0x0F00 - 0x0FFF : Display buffer
 type VirtualMachine struct {
     cpu      *Processor
     memory   [MemorySize]byte
-    video    [VideoSize]bool
+    display  [DisplaySize]bool
     keyboard [16]bool
 }
 
@@ -48,9 +47,11 @@ func New(rom []byte) *VirtualMachine {
     vm.cpu = NewProcessor(vm)
 
     // Load rom data into ram
-    limitCopy := minUint(uint(len(rom)), RomMaxSize)
-    copy(vm.memory[RomStartAddress:], rom[:limitCopy])
-    // Later copy font data into ram
+    romMaxSize := MemoryStackAddr - MemoryRomAddr
+    limitCopy  := minUint16(uint16(len(rom)), romMaxSize)
+    copy(vm.memory[MemoryRomAddr:], rom[:limitCopy])
+
+    // TODO: Load sprites data
 
     return vm
 }
@@ -60,9 +61,6 @@ func FromReader(reader io.Reader) (*VirtualMachine, error) {
     romData, err := ioutil.ReadAll(reader)
     if err != nil {
         return nil, fmt.Errorf("failed to read all: %w", err)
-    } else if uint(len(romData)) > RomMaxSize {
-        return nil, fmt.Errorf("rom size: %d exceed maximum allowed size: %d",
-                               len(romData), RomMaxSize)
     }
 
     return New(romData), nil
@@ -89,27 +87,52 @@ func (vm *VirtualMachine) fixAddress(addr uint16) uint16 {
 
 
 func (vm *VirtualMachine) Read(addr uint16) byte {
-    return vm.memory[vm.fixAddress(addr)]
+    var value byte
+    switch addr := vm.fixAddress(addr); {
+        // Handle keyboard
+        case MemoryKeyboardAddr <= addr && addr < MemoryDisplayAddr:
+            index := addr - MemoryKeyboardAddr
+            if vm.keyboard[index] {
+                value = 1  // Key is pressesd
+            }
+
+        // Regular RAM access - keyboard address range doesn't 
+        // need special handling for reading, 
+        // but I rather it being expressed explicitly 
+        case MemoryDisplayAddr <= addr && addr < MemorySize: fallthrough
+        default: value = vm.memory[addr]
+    }
+
+    return value
 }
 
 
 func (vm *VirtualMachine) Write(addr uint16, data byte) {
     addr = vm.fixAddress(addr)
-    vm.memory[addr] = data
+    switch {
+        // Handle keyboard - Copy changes to the keyboard bool buffer
+        case MemoryKeyboardAddr <= addr && addr < MemoryDisplayAddr:
+            index := addr - MemoryKeyboardAddr
+            vm.keyboard[index] = data == 1
 
-    // We want to copy changes to the video buffer,
-    // from the RAM to our bool video buffer,
-    // since this will be easier for the user of this pacakge to handle.
-    // a different approach is to generate this video buffer per request
-    if addr >= uint16(VideoStartAddress) {
-        index := (uint(addr) - VideoStartAddress) / VideoPixelSize
-        data  := data
-        for offset := uint(0); offset < VideoPixelSize; offset++ {
-            vm.video[index + offset] = data & 1 == 1
-            
-            data >>= 1
-        }
+        // Regular RAM access - keyboard address range doesn't 
+        // need special handling for reading, 
+        // but I rather it being expressed explicitly 
+        
+        // Handle display - Copy changes to the display bool buffer
+        // This will be easier for the user of this pacakge to handle,
+        // since this is a monochrome display
+        case MemoryDisplayAddr <= addr && addr < MemorySize:
+            index := uint(addr - MemoryDisplayAddr) / DisplayPixelWidth
+            data  := data
+            for offset := uint(0); offset < DisplayPixelWidth; offset++ {
+                vm.display[index + offset] = data & 1 == 1
+
+                data >>= 1
+            }
     }
+
+    vm.memory[addr] = data
 }
 
 
