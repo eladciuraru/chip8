@@ -57,5 +57,5 @@ func (cpu *Processor) Execute(opcode uint16) {
 
 func (cpu *Processor) AdvancePC() {
     // TODO: Handle edge case
-    cpu.PC += uint16(InstructionSize)
+    cpu.PC += InstructionSize
 }

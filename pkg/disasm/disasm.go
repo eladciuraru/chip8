@@ -9,7 +9,7 @@ import (
 	"github.com/eladciuraru/chip8/pkg/machine"
 )
 
-const InstructionSize uint = machine.InstructionSize
+const InstructionSize uint = uint(machine.InstructionSize)
 
 
 type Disasm struct {

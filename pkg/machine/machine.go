@@ -4,26 +4,49 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math/bits"
 	"os"
 )
 
 const (
-    InstructionSize uint = 0x02
+    InstructionSize uint16 = 2
+    FontSpriteSize  uint16 = 5
 
     // Memory map related consts
-    MemorySize         uint16 = 0x1000
-    MemoryRomAddr      uint16 = 0x0200
-    MemoryStackAddr    uint16 = 0x0EA0
-    MemoryWorkAreaAddr uint16 = 0x0ED0
-    MemoryKeyboardAddr uint16 = 0x0EF0
-    MemoryDisplayAddr  uint16 = 0x0F00
+    MemorySize          uint16 = 0x1000
+    MemoryFontTableAddr uint16 = 0x0000
+    MemoryRomAddr       uint16 = 0x0200
+    MemoryStackAddr     uint16 = 0x0EA0
+    MemoryWorkAreaAddr  uint16 = 0x0ED0
+    MemoryKeyboardAddr  uint16 = 0x0EF0
+    MemoryDisplayAddr   uint16 = 0x0F00
 
     // Display realted consts
-    DisplayWidth      uint = 64
-    DisplayHeight     uint = 32
-    DisplaySize       uint = DisplayHeight * DisplayWidth
-    DisplayMemorySize uint = uint(MemorySize - MemoryDisplayAddr)
-    DisplayPixelWidth uint = 8
+    DisplayWidth      uint16 = 64
+    DisplayHeight     uint16 = 32
+    DisplaySize       uint16 = DisplayHeight * DisplayWidth
+    DisplayMemorySize uint16 = MemorySize - MemoryDisplayAddr
+    DisplayPixelWidth uint16 = 8
+
+    // Keys consts
+    KeyPressedValue  byte = 1
+    KeyReleasedValue byte = 0
+    KeyZero          byte = iota
+    KeyOne
+    KeyTwo
+    KeyThree
+    KeyFour
+    KeyFive
+    KeySix
+    KeySeven
+    KeyEigth
+    KeyNine
+    KeyA
+    KeyB
+    KeyC
+    KeyD
+    KeyE
+    KeyF
 )
 
 type VirtualMachine struct {
@@ -51,7 +74,8 @@ func New(rom []byte) *VirtualMachine {
     limitCopy  := minUint16(uint16(len(rom)), romMaxSize)
     copy(vm.memory[MemoryRomAddr:], rom[:limitCopy])
 
-    // TODO: Load sprites data
+    // Load sprites data - currently only fonts
+    copy(vm.memory[MemoryFontTableAddr:], fontTable)
 
     return vm
 }
@@ -93,14 +117,23 @@ func (vm *VirtualMachine) Read(addr uint16) byte {
         case MemoryKeyboardAddr <= addr && addr < MemoryDisplayAddr:
             index := addr - MemoryKeyboardAddr
             if vm.keyboard[index] {
-                value = 1  // Key is pressesd
+                value = KeyPressedValue
+            } else {
+                value = KeyReleasedValue
             }
 
-        // Regular RAM access - keyboard address range doesn't 
-        // need special handling for reading, 
-        // but I rather it being expressed explicitly 
-        case MemoryDisplayAddr <= addr && addr < MemorySize: fallthrough
-        default: value = vm.memory[addr]
+        // Handle display
+        case MemoryDisplayAddr <= addr && addr < MemorySize:
+            offset := (addr - MemoryDisplayAddr) / DisplayPixelWidth
+            for i := uint16(0); i < DisplayPixelWidth; i++ {
+                if vm.display[offset + i] {
+                    value |= bits.RotateLeft8(1, int(i))
+                }
+            }
+
+        // Regular RAM access
+        default:
+            value = vm.memory[addr]
     }
 
     return value
@@ -108,34 +141,46 @@ func (vm *VirtualMachine) Read(addr uint16) byte {
 
 
 func (vm *VirtualMachine) Write(addr uint16, data byte) {
-    addr = vm.fixAddress(addr)
-    switch {
+    switch addr = vm.fixAddress(addr); {
         // Handle keyboard - Copy changes to the keyboard bool buffer
         case MemoryKeyboardAddr <= addr && addr < MemoryDisplayAddr:
             index := addr - MemoryKeyboardAddr
-            vm.keyboard[index] = data == 1
+            vm.keyboard[index] = (data == KeyPressedValue)
 
-        // Regular RAM access - keyboard address range doesn't 
-        // need special handling for reading, 
-        // but I rather it being expressed explicitly 
-        
         // Handle display - Copy changes to the display bool buffer
-        // This will be easier for the user of this pacakge to handle,
-        // since this is a monochrome display
         case MemoryDisplayAddr <= addr && addr < MemorySize:
-            index := uint(addr - MemoryDisplayAddr) / DisplayPixelWidth
-            data  := data
-            for offset := uint(0); offset < DisplayPixelWidth; offset++ {
-                vm.display[index + offset] = data & 1 == 1
+            offset := (addr - MemoryDisplayAddr) / DisplayPixelWidth
+            mask   := byte(1)
+            for i := uint16(0); i < DisplayPixelWidth; i++ {
+                vm.display[offset + i] = data & mask == mask
 
-                data >>= 1
+                mask <<= 1
             }
-    }
 
-    vm.memory[addr] = data
+        // Regular RAM access
+        default:
+            vm.memory[addr] = data
+    }
 }
 
 
-func (vm *VirtualMachine) Start() {
+func (vm *VirtualMachine) SetKeyState(keyIndex byte, pressed bool) bool {
+    if keyIndex >= byte(len(vm.keyboard)) {
+        return false
+    }
 
+    prevState := vm.keyboard[keyIndex]
+    vm.keyboard[keyIndex] = pressed
+
+    return prevState
+}
+
+
+func (vm *VirtualMachine) GetKeyStates() [16]bool {
+    return vm.keyboard
+}
+
+
+func (vm *VirtualMachine) GetDisplayState() [DisplaySize]bool {
+    return vm.display
 }
