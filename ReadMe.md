@@ -16,8 +16,9 @@ and my interest in writing emulators.
 * __`casm`__ - Assembler
 * __`cdbg`__ - Debugger
 
-__Note__:
-All the tools, will be also available as a package with an easy to use API.
+__Notes__:
+* All the tools, will be also available as a package with an easy to use API.
+* virtual machine command only supported on windows
 
 
 # Build
