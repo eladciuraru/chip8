@@ -12,13 +12,16 @@ type User32DLL struct {
     _GetMessageW      *syscall.Proc
     _TranslateMessage *syscall.Proc
     _DispatchMessageW *syscall.Proc
+    _PostQuitMessage  *syscall.Proc
+    _BeginPaint       *syscall.Proc
+    _EndPaint         *syscall.Proc
 }
 
 
-var user32 = newUser32() 
+var user32 = NewUser32()
 
 
-func newUser32() *User32DLL {
+func NewUser32() *User32DLL {
     dll := syscall.MustLoadDLL("user32")
 
     return &User32DLL{
@@ -28,6 +31,9 @@ func newUser32() *User32DLL {
         _GetMessageW:      dll.MustFindProc("GetMessageW"),
         _TranslateMessage: dll.MustFindProc("TranslateMessage"),
         _DispatchMessageW: dll.MustFindProc("DispatchMessageW"),
+        _PostQuitMessage:  dll.MustFindProc("PostQuitMessage"),
+        _BeginPaint:       dll.MustFindProc("BeginPaint"),
+        _EndPaint:         dll.MustFindProc("EndPaint"),
     }
 }
 
@@ -77,7 +83,7 @@ func (u32 *User32DLL) CreateWindowExW(dwExStyle uint32, lpClassName, lpWindowNam
 }
 
 
-func (u32 *User32DLL) GetMessageW(lpMsg *MSG, hWnd syscall.Handle, 
+func (u32 *User32DLL) GetMessageW(lpMsg *MSG, hWnd syscall.Handle,
                                   msgFilterMin uint32, msgFilterMax uint32) int32 {
     ret, _, _ := u32._GetMessageW.Call(
         uintptr(unsafe.Pointer(lpMsg)),
@@ -101,4 +107,29 @@ func (u32 *User32DLL) DispatchMessageW(lpMsg *MSG) uintptr {
     ret, _, _ := u32._DispatchMessageW.Call(uintptr(unsafe.Pointer(lpMsg)))
 
     return ret
+}
+
+
+func (u32 *User32DLL) PostQuitMessage(nExitCode int32) {
+    u32._PostQuitMessage.Call(uintptr(nExitCode))
+}
+
+
+func (u32 *User32DLL) BeginPaint(hWnd syscall.Handle, lpPaint *PAINTSTRUCT) syscall.Handle {
+    ret, _, _ := u32._BeginPaint.Call(
+        uintptr(hWnd),
+        uintptr(unsafe.Pointer(lpPaint)),
+    )
+
+    return syscall.Handle(ret)
+}
+
+
+func (u32 *User32DLL) EndPaint(hWnd syscall.Handle, lpPaint *PAINTSTRUCT) int32 {
+    ret, _, _ := u32._EndPaint.Call(
+        uintptr(hWnd),
+        uintptr(unsafe.Pointer(lpPaint)),
+    )
+
+    return int32(ret)
 }

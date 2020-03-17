@@ -10,10 +10,10 @@ type Kernel32DLL struct {
 }
 
 
-var kernel32 = newKernel32() 
+var kernel32 = NewKernel32() 
 
 
-func newKernel32() *Kernel32DLL {
+func NewKernel32() *Kernel32DLL {
     dll := syscall.MustLoadDLL("kernel32")
 
     return &Kernel32DLL{

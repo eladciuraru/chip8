@@ -2,8 +2,14 @@
 
 package main
 
+import "runtime"
+
 func main() {
-    window := newWindow("test", 200, 200)
+    // This is required, since handling WM_PAINT message requires
+    // the same thread that registered the WndProc
+    runtime.LockOSThread()
+    
+    window := NewWindow("test", 200, 200)
     window.MessageLoop()
     // vm, err := machine.FromFile("roms/maze.bin")
     // if err != nil {
