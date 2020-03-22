@@ -164,6 +164,11 @@ func (vm *VirtualMachine) Write(addr uint16, data byte) {
 }
 
 
+func (vm *VirtualMachine) DoCycle() {
+    vm.cpu.Cycle()
+}
+
+
 func (vm *VirtualMachine) SetKeyState(keyIndex byte, pressed bool) bool {
     if keyIndex >= byte(len(vm.keyboard)) {
         return false

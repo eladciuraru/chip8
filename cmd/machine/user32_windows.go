@@ -9,12 +9,16 @@ type User32DLL struct {
     _DefWindowProcW   *syscall.Proc
     _RegisterClassW   *syscall.Proc
     _CreateWindowExW  *syscall.Proc
-    _GetMessageW      *syscall.Proc
+    _PeekMessageW     *syscall.Proc
     _TranslateMessage *syscall.Proc
     _DispatchMessageW *syscall.Proc
     _PostQuitMessage  *syscall.Proc
     _BeginPaint       *syscall.Proc
     _EndPaint         *syscall.Proc
+    _GetDC            *syscall.Proc
+    _ReleaseDC        *syscall.Proc
+    _AdjustWindowRect *syscall.Proc
+    _GetClientRect    *syscall.Proc
 }
 
 
@@ -28,12 +32,14 @@ func NewUser32() *User32DLL {
         _DefWindowProcW:   dll.MustFindProc("DefWindowProcW"),
         _RegisterClassW:   dll.MustFindProc("RegisterClassW"),
         _CreateWindowExW:  dll.MustFindProc("CreateWindowExW"),
-        _GetMessageW:      dll.MustFindProc("GetMessageW"),
+        _PeekMessageW:     dll.MustFindProc("PeekMessageW"),
         _TranslateMessage: dll.MustFindProc("TranslateMessage"),
         _DispatchMessageW: dll.MustFindProc("DispatchMessageW"),
         _PostQuitMessage:  dll.MustFindProc("PostQuitMessage"),
-        _BeginPaint:       dll.MustFindProc("BeginPaint"),
-        _EndPaint:         dll.MustFindProc("EndPaint"),
+        _GetDC:            dll.MustFindProc("GetDC"),
+        _ReleaseDC:        dll.MustFindProc("ReleaseDC"),
+        _AdjustWindowRect: dll.MustFindProc("AdjustWindowRect"),
+        _GetClientRect : dll.MustFindProc("GetClientRect"),
     }
 }
 
@@ -83,13 +89,14 @@ func (u32 *User32DLL) CreateWindowExW(dwExStyle uint32, lpClassName, lpWindowNam
 }
 
 
-func (u32 *User32DLL) GetMessageW(lpMsg *MSG, hWnd syscall.Handle,
-                                  msgFilterMin uint32, msgFilterMax uint32) int32 {
-    ret, _, _ := u32._GetMessageW.Call(
+func (u32 *User32DLL) PeekMessageW(lpMsg *MSG, hWnd syscall.Handle,
+                                  msgFilterMin, msgFilterMax, wRemoveMsg uint32) int32 {
+    ret, _, _ := u32._PeekMessageW.Call(
         uintptr(unsafe.Pointer(lpMsg)),
         uintptr(hWnd),
         uintptr(msgFilterMin),
         uintptr(msgFilterMax),
+        uintptr(wRemoveMsg),
     )
 
     return int32(ret)
@@ -115,20 +122,41 @@ func (u32 *User32DLL) PostQuitMessage(nExitCode int32) {
 }
 
 
-func (u32 *User32DLL) BeginPaint(hWnd syscall.Handle, lpPaint *PAINTSTRUCT) syscall.Handle {
-    ret, _, _ := u32._BeginPaint.Call(
+func (u32 *User32DLL) GetDC(hWnd syscall.Handle) syscall.Handle {
+    ret, _, _ := u32._GetDC.Call(
         uintptr(hWnd),
-        uintptr(unsafe.Pointer(lpPaint)),
     )
 
     return syscall.Handle(ret)
 }
 
 
-func (u32 *User32DLL) EndPaint(hWnd syscall.Handle, lpPaint *PAINTSTRUCT) int32 {
-    ret, _, _ := u32._EndPaint.Call(
+func (u32 *User32DLL) ReleaseDC(hWnd, hdc syscall.Handle) int32 {
+    ret, _, _ := u32._ReleaseDC.Call(
         uintptr(hWnd),
-        uintptr(unsafe.Pointer(lpPaint)),
+        uintptr(hdc),
+    )
+
+    return int32(ret)
+}
+
+
+func (u32 *User32DLL) AdjustWindowRect(lpRect *RECT, dwStyle uint32,
+                                       bMenu int32) int32 {
+    ret, _, _ := u32._AdjustWindowRect.Call(
+        uintptr(unsafe.Pointer(lpRect)),
+        uintptr(dwStyle),
+        uintptr(bMenu),
+    )
+
+    return int32(ret)
+}
+ 
+
+func (u32 *User32DLL) GetClientRect(hWnd syscall.Handle, lpRect *RECT) int32 {
+    ret, _, _ := u32._GetClientRect.Call(
+        uintptr(hWnd),
+        uintptr(unsafe.Pointer(lpRect)),
     )
 
     return int32(ret)

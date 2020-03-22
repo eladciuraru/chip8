@@ -5,15 +5,18 @@ import "syscall"
 // Using var instead of constants because go's constants
 // are shit to deal with
 var (
-    WS_OVERLAPPED     uint32 = 0x00000000
-	WS_MINIMIZEBOX    uint32 = 0x00020000
+	WS_OVERLAPPED     uint32 = 0x00000000
+	WS_CAPTION        uint32 = 0x00C00000
 	WS_SYSMENU        uint32 = 0x00080000
-    WS_VISIBLE        uint32 = 0x10000000
+	WS_MINIMIZEBOX    uint32 = 0x00020000
+	WS_VISIBLE        uint32 = 0x10000000
 
 	CW_USEDEFAULT     uint32 = 0x80000000
 	
 	WM_DESTROY        uint32 = 0x00000002
-	WM_PAINT          uint32 = 0x0000000F
+	WM_QUIT           uint32 = 0x00000012
+
+	PM_REMOVE         uint32 = 0x00000001
 
 	BI_RGB            uint32 = 0x00000000
 	DIB_RGB_COLORS    uint32 = 0x00000000

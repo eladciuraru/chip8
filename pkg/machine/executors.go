@@ -27,7 +27,7 @@ var executorsMap = map[uint16]executor{
     0xA000: ldExecutor,
     0xB000: jmpExecutor,
     0xC000: rndExecutor,
-    // 0xD000: drwExecutor,
+    0xD000: drwExecutor,
     0xE09E: skpExecutor,
     0xE0A1: sknpExecutor,
     0xF007: ldExecutor,
@@ -154,9 +154,9 @@ func ldExecutor(cpu *Processor, opcode uint16) {
                              //     when the condition is met (pressing a key in this case)
                 case 0x0015: cpu.DT = cpu.V[op1]
                 case 0x0018: cpu.ST = cpu.V[op1]
-                case 0x0029: cpu.I  = MemoryFontTableAddr + 
+                case 0x0029: cpu.I  = MemoryFontTableAddr +
                                       uint16(cpu.V[op1]) * FontSpriteSize
-                case 0x0033: 
+                case 0x0033:
                     addr  := cpu.I
                     value := cpu.V[op1]
 
@@ -164,12 +164,12 @@ func ldExecutor(cpu *Processor, opcode uint16) {
                     cpu.Write(addr + 1, value / 10 % 10)  // tens digit
                     cpu.Write(addr + 2, value % 10)  // ones digit
 
-                case 0x0055: 
+                case 0x0055:
                     for i := 0; i < len(cpu.V); i++ {
                         cpu.Write(cpu.I + uint16(i), cpu.V[i])
                     }
 
-                case 0x0065: 
+                case 0x0065:
                     for i := 0; i < len(cpu.V); i++ {
                         cpu.V[i] = cpu.Read(cpu.I + uint16(i))
                     }
@@ -197,12 +197,12 @@ func addExecutor(cpu *Processor, opcode uint16) {
             }
 
             cpu.V[op1] = byte(sum)
-        
+
         case 0xF000:
             op1 := DecodeArg1(opcode)
 
             cpu.I += uint16(cpu.V[op1])
-    }    
+    }
 }
 
 
@@ -292,4 +292,28 @@ func shlExecutor(cpu *Processor, opcode uint16) {
 
     cpu.V[0x0F]  = (cpu.V[op1] & 0x80) >> 7
     cpu.V[op1] <<= 1
+}
+
+
+func drwExecutor(cpu *Processor, opcode uint16) {
+    op1, op2 := DecodeArgsMid(opcode)
+    op3      := opcode & 0x000F
+
+    x, y   := uint16(cpu.V[op1]), uint16(cpu.V[op2])
+    stride := DisplayWidth
+    offset := y * DisplayWidth + x
+
+    cpu.V[0x0F] = 0
+    for i := uint16(0); i < op3; i++ {
+        displayData := cpu.Read(MemoryDisplayAddr + offset)
+        spriteData  := cpu.Read(cpu.I + i)
+        newData     := displayData ^ spriteData
+
+        if displayData & ^newData != 0 {
+            cpu.V[0x0F] = 0x01  // We cause a pixel to be erased
+        }
+        cpu.Write(MemoryDisplayAddr + offset, newData)
+
+        offset += stride
+    }
 }

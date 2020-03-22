@@ -3,13 +3,15 @@ package main
 import (
 	"fmt"
 	"syscall"
-	"time"
 )
 
 type Window struct {
 	width  int32
     height int32
     bitmap *Bitmap
+
+    // Windows shit
+    hWnd syscall.Handle
 }
 
 
@@ -33,11 +35,18 @@ func NewWindow(title string, width, height int32) *Window {
     res := user32.RegisterClassW(&wndclass)
     Assert(res != 0, fmt.Errorf("failed to register the window class"))
 
-    style := WS_OVERLAPPED | WS_MINIMIZEBOX | WS_SYSMENU | WS_VISIBLE
-    hWnd  := user32.CreateWindowExW(0, lpTitle, lpTitle, style,
-                                    int32(CW_USEDEFAULT), int32(CW_USEDEFAULT),
-                                    width, height, 0, 0, hInstance, 0)
-    Assert(hWnd != 0, fmt.Errorf("failed to create window"))
+    // Given width & height are the desired client area,
+    // overall window size needs to be calculated
+    style := WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU |
+             WS_MINIMIZEBOX | WS_VISIBLE
+    rect  := RECT{left: 0, top: 0, right: width, bottom: height}
+    user32.AdjustWindowRect(&rect, style, 0)
+
+    window.hWnd = user32.CreateWindowExW(0, lpTitle, lpTitle, style,
+                                         int32(CW_USEDEFAULT), int32(CW_USEDEFAULT),
+                                         rect.right - rect.left, rect.bottom - rect.top,
+                                         0, 0, hInstance, 0)
+    Assert(window.hWnd != 0, fmt.Errorf("failed to create window"))
 
     return window
 }
@@ -46,18 +55,6 @@ func NewWindow(title string, width, height int32) *Window {
 func (win *Window) WindowProc(hWnd syscall.Handle, Msg uint32,
                               wParam uintptr, lParam uintptr) uintptr {
     switch Msg {
-        case WM_PAINT:
-            paint  := &PAINTSTRUCT{}
-            hdc    := user32.BeginPaint(hWnd, paint)
-            
-            bitmap := win.bitmap
-            gdi32.StretchDIBits(hdc, 0, 0, win.width, win.height,
-                                0, 0, bitmap.width, bitmap.height,
-                                &bitmap.buffer[0], &bitmap.info, DIB_RGB_COLORS, SRCCOPY)
-
-            user32.EndPaint(hWnd, paint)
-            return 0
-
         case WM_DESTROY:
             user32.PostQuitMessage(0)
             return 0
@@ -67,17 +64,37 @@ func (win *Window) WindowProc(hWnd syscall.Handle, Msg uint32,
 }
 
 
-func (win *Window) MessageLoop() {
-    msg := MSG{}
-    for {
-        if ret := user32.GetMessageW(&msg, 0, 0, 0); ret == 0 || ret == -1 {
-            break
-        }
+func (win *Window) FlushBitmap() {
+    hdc := user32.GetDC(win.hWnd)
 
+    bitmap := win.bitmap
+    gdi32.StretchDIBits(hdc, 0, 0, win.width, win.height,
+                        0, 0, bitmap.width, bitmap.height,
+                        &bitmap.buffer[0], &bitmap.info, DIB_RGB_COLORS, SRCCOPY)
+
+    user32.ReleaseDC(win.hWnd, hdc)
+}
+
+
+func (win *Window) MessageLoop() bool {
+    msg := MSG{}
+    for user32.PeekMessageW(&msg, 0, 0, 0, PM_REMOVE) != 0 {
         user32.TranslateMessage(&msg)
         user32.DispatchMessageW(&msg)
 
-        // Limit 60 FPS
-        time.Sleep(1000 / 60)
+        if msg.message == WM_QUIT {
+            return false
+        }
+    }
+
+    return true
+}
+
+
+func (win *Window) WindowLoop(callback func(*Window)) {
+    for win.MessageLoop() {
+        callback(win)
+
+        win.FlushBitmap()
     }
 }

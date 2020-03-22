@@ -19,7 +19,7 @@ func NewBitmap(width, height int32) *Bitmap {
     header := BITMAPINFOHEADER {
         biSize:        uint32(unsafe.Sizeof(BITMAPINFOHEADER{})),
         biWidth:       width,
-        biHeight:      height,
+        biHeight:      -height,  // For top down buffer
         biPlanes:      1,
         biBitCount:    bytesPerPixel * bitsPerByte,
         biCompression: BI_RGB,
