@@ -165,7 +165,7 @@ func (vm *VirtualMachine) Write(addr uint16, data byte) {
 
 
 func (vm *VirtualMachine) DoCycle() {
-    vm.cpu.Cycle()
+    // vm.cpu.Cycle()
 }
 
 

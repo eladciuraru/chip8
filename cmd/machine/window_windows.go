@@ -3,11 +3,13 @@ package main
 import (
     "fmt"
     "syscall"
+    "time"
 )
 
 type Window struct {
     width    int32
     height   int32
+    clock    time.Duration
     bitmap   *Bitmap
     keyboard [256]bool
 
@@ -16,10 +18,12 @@ type Window struct {
 }
 
 
-func NewWindow(title string, width, height int32) *Window {
+// TODO: Chane this function to support optional pattern
+func NewWindow(title string, width, height int32, clock time.Duration) *Window {
     window := &Window{
         width:  width,
         height: height,
+        clock:  time.Second / clock,
         bitmap: NewBitmap(width, height),
     }
 
@@ -109,10 +113,13 @@ func (win *Window) HandleKeyboard() {
 
 func (win *Window) WindowLoop(callback func(*Window)) {
     for win.MessageLoop() {
+        start := time.Now()
+
         win.HandleKeyboard()
-
         callback(win)
-
         win.FlushBitmap()
+
+        // Limit FPS
+        time.Sleep(win.clock - time.Since(start))
     }
 }

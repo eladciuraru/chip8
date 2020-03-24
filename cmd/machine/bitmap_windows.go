@@ -3,10 +3,12 @@ package main
 import "unsafe"
 
 type Bitmap struct {
-    info   BITMAPINFO
-    buffer []byte
-    width  int32
-    height int32
+    info      BITMAPINFO
+    buffer    []byte
+    width     int32
+    height    int32
+    stride    int32
+    pixelSize int32
 }
 
 
@@ -25,10 +27,13 @@ func NewBitmap(width, height int32) *Bitmap {
         biCompression: BI_RGB,
     }
 
+    stride := width * bytesPerPixel
     return &Bitmap{
-        info:   BITMAPINFO{bmiHeader: header},
-        width:  width,
-        height: height,
-        buffer: make([]byte, width * height * bytesPerPixel),
+        info:      BITMAPINFO{bmiHeader: header},
+        width:     width,
+        height:    height,
+        stride:    stride,
+        pixelSize: bytesPerPixel,
+        buffer:    make([]byte, stride * height),
     }
 }
