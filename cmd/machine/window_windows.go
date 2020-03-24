@@ -1,14 +1,15 @@
 package main
 
 import (
-	"fmt"
-	"syscall"
+    "fmt"
+    "syscall"
 )
 
 type Window struct {
-	width  int32
-    height int32
-    bitmap *Bitmap
+    width    int32
+    height   int32
+    bitmap   *Bitmap
+    keyboard [256]bool
 
     // Windows shit
     hWnd syscall.Handle
@@ -55,6 +56,10 @@ func NewWindow(title string, width, height int32) *Window {
 func (win *Window) WindowProc(hWnd syscall.Handle, Msg uint32,
                               wParam uintptr, lParam uintptr) uintptr {
     switch Msg {
+        // case WM_KEYDOWN: fallthrough
+        // case WM_KEYUP:
+        //     win.keyboard[wParam] = uint32(lParam) & (1 << 31) == 0
+
         case WM_DESTROY:
             user32.PostQuitMessage(0)
             return 0
@@ -91,8 +96,21 @@ func (win *Window) MessageLoop() bool {
 }
 
 
+func (win *Window) HandleKeyboard() {
+    var keyState [256]byte
+
+    user32.GetKeyboardState(&keyState[0])
+
+    for i, state := range keyState {
+        win.keyboard[i] = (state & 0x80) != 0
+    }
+}
+
+
 func (win *Window) WindowLoop(callback func(*Window)) {
     for win.MessageLoop() {
+        win.HandleKeyboard()
+
         callback(win)
 
         win.FlushBitmap()

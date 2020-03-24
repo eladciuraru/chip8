@@ -1,8 +1,8 @@
 package main
 
 import (
-	"syscall"
-	"unsafe"
+    "syscall"
+    "unsafe"
 )
 
 type Kernel32DLL struct {

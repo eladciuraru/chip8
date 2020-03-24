@@ -1,8 +1,8 @@
 package main
 
 import (
-	"syscall"
-	"unsafe"
+    "syscall"
+    "unsafe"
 )
 
 type User32DLL struct {
@@ -13,12 +13,11 @@ type User32DLL struct {
     _TranslateMessage *syscall.Proc
     _DispatchMessageW *syscall.Proc
     _PostQuitMessage  *syscall.Proc
-    _BeginPaint       *syscall.Proc
-    _EndPaint         *syscall.Proc
     _GetDC            *syscall.Proc
     _ReleaseDC        *syscall.Proc
     _AdjustWindowRect *syscall.Proc
     _GetClientRect    *syscall.Proc
+    _GetKeyboardState *syscall.Proc
 }
 
 
@@ -39,7 +38,8 @@ func NewUser32() *User32DLL {
         _GetDC:            dll.MustFindProc("GetDC"),
         _ReleaseDC:        dll.MustFindProc("ReleaseDC"),
         _AdjustWindowRect: dll.MustFindProc("AdjustWindowRect"),
-        _GetClientRect : dll.MustFindProc("GetClientRect"),
+        _GetClientRect:    dll.MustFindProc("GetClientRect"),
+        _GetKeyboardState: dll.MustFindProc("GetKeyboardState"),
     }
 }
 
@@ -157,6 +157,15 @@ func (u32 *User32DLL) GetClientRect(hWnd syscall.Handle, lpRect *RECT) int32 {
     ret, _, _ := u32._GetClientRect.Call(
         uintptr(hWnd),
         uintptr(unsafe.Pointer(lpRect)),
+    )
+
+    return int32(ret)
+}
+
+
+func (u32 *User32DLL) GetKeyboardState(lpKeyState *byte) int32 {
+    ret, _, _ := u32._GetKeyboardState.Call(
+        uintptr(unsafe.Pointer(lpKeyState)),
     )
 
     return int32(ret)
