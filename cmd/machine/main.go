@@ -27,7 +27,7 @@ func parseArgs() Arguments {
 		scaleHelp = "How much to scale each pixel"
 		clockHelp = "What clock speed to use"
         shortHelp = " (shorthand)"
-        
+
         scaleDefault = 10
         clockDefault = 60
     )
@@ -75,20 +75,24 @@ func main() {
     height := int32(machine.DisplayHeight) * int32(args.scale)
     window := NewWindow("CHIP8 - Virtual Machine",
                         width, height, time.Duration(args.clock))
+    // index := uint(0)
 
-    index := uint(0)
+    fillCell := func(bitmap *Bitmap, x, y, count uint, flag bool) {
+        value := byte(0)
+        if flag {
+            value = byte(255)
+        }
 
-    fillCell := func(bitmap *Bitmap, x, y, count uint) {
         var offX, offY uint
         for offY = 0; offY < count; offY++ {
             for offX = 0; offX < count; offX++ {
                 offset := (offY + (y * count)) * uint(bitmap.stride) +
                           (offX + (x * count)) * uint(bitmap.pixelSize)
 
-                bitmap.buffer[offset]     = 255
-                bitmap.buffer[offset + 1] = 255
-                bitmap.buffer[offset + 2] = 255
-                bitmap.buffer[offset + 3] = 255
+                bitmap.buffer[offset]     = value
+                bitmap.buffer[offset + 1] = value
+                bitmap.buffer[offset + 2] = value
+                bitmap.buffer[offset + 3] = value
             }
         }
     }
@@ -97,27 +101,29 @@ func main() {
         vm.DoCycle()
 
         bitmap := win.bitmap
-        bitmap.buffer = make([]byte, len(win.bitmap.buffer))
-        
-        baseY := uint(index) / uint(machine.DisplayWidth)
-        baseX := uint(index) % uint(machine.DisplayWidth)
-        fillCell(bitmap, baseX, baseY, args.scale)
+        // bitmap.buffer = make([]byte, len(win.bitmap.buffer))
 
-        fmt.Println(index)
-        if win.keyboard['W'] {
-            index -= 64  // up
+        for index, state := range vm.GetDisplayState() {
+            baseY := uint(index) / uint(machine.DisplayWidth)
+            baseX := uint(index) % uint(machine.DisplayWidth)
+            fillCell(bitmap, baseX, baseY, args.scale, state)
         }
-        if win.keyboard['A'] {
-            index -= 1  // left
-        }
-        if win.keyboard['S'] {
-            index += 64  // down
-        }
-        if win.keyboard['D'] {
-            index += 1  // right
-        }
+
+        // fmt.Println(index)
+        // if win.keyboard['W'] {
+        //     index -= 64  // up
+        // }
+        // if win.keyboard['A'] {
+        //     index -= 1  // left
+        // }
+        // if win.keyboard['S'] {
+        //     index += 64  // down
+        // }
+        // if win.keyboard['D'] {
+        //     index += 1  // right
+        // }
         // index++
-        index = index % 2048
+        // index = index % 2048
     })
 }
 

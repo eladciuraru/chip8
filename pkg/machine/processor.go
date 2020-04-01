@@ -48,10 +48,12 @@ func (cpu *Processor) Execute(opcode uint16) {
     executor, ok := executorsMap[DecodeOpcode(opcode)]
     if !ok {
         // TODO: Remove this when it is decided how to handle this
-        panic(fmt.Errorf("Unknown opcode found: %#04x", opcode))
+        // panic(fmt.Errorf("Unknown opcode found: %#04x", opcode))
+        fmt.Printf("Unknown opcode found: %#04x\n", opcode)
+    } else {
+        // fmt.Printf("Executing instruction at: %d\n", (cpu.PC - 0x200) / 2)
+        executor(cpu, opcode)
     }
-
-    executor(cpu, opcode)
 }
 
 

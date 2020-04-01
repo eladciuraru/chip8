@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"math/bits"
 	"os"
 )
 
@@ -124,11 +123,13 @@ func (vm *VirtualMachine) Read(addr uint16) byte {
 
         // Handle display
         case MemoryDisplayAddr <= addr && addr < MemorySize:
-            offset := (addr - MemoryDisplayAddr) / DisplayPixelWidth
+            offset := (addr - MemoryDisplayAddr) * DisplayPixelWidth
+            mask   := byte(0x80)
             for i := uint16(0); i < DisplayPixelWidth; i++ {
                 if vm.display[offset + i] {
-                    value |= bits.RotateLeft8(1, int(i))
+                    value |= mask
                 }
+                mask >>= 1
             }
 
         // Regular RAM access
@@ -149,12 +150,12 @@ func (vm *VirtualMachine) Write(addr uint16, data byte) {
 
         // Handle display - Copy changes to the display bool buffer
         case MemoryDisplayAddr <= addr && addr < MemorySize:
-            offset := (addr - MemoryDisplayAddr) / DisplayPixelWidth
-            mask   := byte(1)
+            offset := (addr - MemoryDisplayAddr) * DisplayPixelWidth
+            mask   := byte(0x80)
             for i := uint16(0); i < DisplayPixelWidth; i++ {
                 vm.display[offset + i] = data & mask == mask
 
-                mask <<= 1
+                mask >>= 1
             }
 
         // Regular RAM access
@@ -165,7 +166,7 @@ func (vm *VirtualMachine) Write(addr uint16, data byte) {
 
 
 func (vm *VirtualMachine) DoCycle() {
-    // vm.cpu.Cycle()
+    vm.cpu.Cycle()
 }
 
 

@@ -300,20 +300,34 @@ func drwExecutor(cpu *Processor, opcode uint16) {
     op3      := opcode & 0x000F
 
     x, y   := uint16(cpu.V[op1]), uint16(cpu.V[op2])
-    stride := DisplayWidth
     offset := y * DisplayWidth + x
+    stride := DisplayWidth / DisplayPixelWidth
+    index  := offset / DisplayPixelWidth
 
+    // This is opposite because the MSB corresponds to 
+    // earlier pixel on the display than LSB
+    shiftBits := (offset % DisplayPixelWidth)
+    mask2 := byte(0xFF) >> shiftBits
+    mask1 := ^mask2
+    
     cpu.V[0x0F] = 0
     for i := uint16(0); i < op3; i++ {
-        displayData := cpu.Read(MemoryDisplayAddr + offset)
-        spriteData  := cpu.Read(cpu.I + i)
-        newData     := displayData ^ spriteData
+        dispData1 := cpu.Read(MemoryDisplayAddr + index) & mask1
+        dispData2 := cpu.Read(MemoryDisplayAddr + index + 1) & mask2
 
-        if displayData & ^newData != 0 {
+        spriteData := cpu.Read(cpu.I + i)
+        sprite1 := spriteData & mask1
+        sprite2 := spriteData & mask2
+
+        xorData1 := dispData1 ^ (sprite1 >> (DisplayPixelWidth - shiftBits))
+        xorData2 := dispData2 ^ (((dispData2 >> shiftBits) ^ sprite2) << shiftBits)
+
+        if dispData1 & ^xorData1 != 0 || dispData2 & ^xorData2 != 0 {
             cpu.V[0x0F] = 0x01  // We cause a pixel to be erased
         }
-        cpu.Write(MemoryDisplayAddr + offset, newData)
+        cpu.Write(MemoryDisplayAddr + index, xorData1)
+        cpu.Write(MemoryDisplayAddr + index + 1, xorData2)
 
-        offset += stride
+        index += stride
     }
 }
