@@ -151,7 +151,7 @@ func (u32 *User32DLL) AdjustWindowRect(lpRect *RECT, dwStyle uint32,
 
     return int32(ret)
 }
- 
+
 
 func (u32 *User32DLL) GetClientRect(hWnd syscall.Handle, lpRect *RECT) int32 {
     ret, _, _ := u32._GetClientRect.Call(

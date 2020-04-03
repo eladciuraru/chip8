@@ -6,8 +6,11 @@ The motivation for this project was to learn a new programming language,
 and my interest in writing emulators.
 
 
-# Tools
+# Images
+![alt text](./images/maze.jpg "Maze output")
 
+
+# Tools
 ### Existing Tools
 * __`disasm`__ - Disassmbler of the CHIP8 instruction set
 * __`machine`__ - Virtual Machine
@@ -15,6 +18,7 @@ and my interest in writing emulators.
 ### Planned Tools
 * __`casm`__ - Assembler
 * __`cdbg`__ - Debugger
+* __`spriter`__ - Sprite creator
 
 __Notes__:
 * All the tools, will be also available as a package with an easy to use API.

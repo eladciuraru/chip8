@@ -30,6 +30,7 @@ func NewProcessor(bus Bus) *Processor {
 
 func (cpu *Processor) Cycle() {
     opcode := cpu.FetchOpcode()
+    cpu.AdvancePC()
 
     cpu.Execute(opcode)
 }
@@ -38,7 +39,6 @@ func (cpu *Processor) Cycle() {
 func (cpu *Processor) FetchOpcode() uint16 {
     opcode := uint16(cpu.Read(cpu.PC)) << 8 +
               uint16(cpu.Read(cpu.PC + 1))
-    cpu.AdvancePC()
 
     return opcode
 }

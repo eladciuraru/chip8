@@ -314,9 +314,14 @@ func drwExecutor(cpu *Processor, opcode uint16) {
 
     cpu.V[collisionIndex] = collisionOff
     for yOff := uint16(0); yOff < op3; yOff++ {
-        memAddr   := MemoryDisplayAddr + index
-        dispData1 := cpu.Read(memAddr)
-        dispData2 := cpu.Read(memAddr + 1)
+        memAddr1  := MemoryDisplayAddr + index
+        memAddr2  := memAddr1 + 1
+        if memAddr2 % DisplayPixelWidth == 0 {
+            memAddr2 -= DisplayMemoryStride
+        }
+
+        dispData1 := cpu.Read(memAddr1)
+        dispData2 := cpu.Read(memAddr2)
 
         spriteData  := cpu.Read(cpu.I + yOff)
         spriteData1 := spriteData >> shrBits
@@ -330,8 +335,8 @@ func drwExecutor(cpu *Processor, opcode uint16) {
             cpu.V[collisionIndex] = collisionOn
         }
 
-        cpu.Write(memAddr, xorData1)
-        cpu.Write(memAddr + 1, xorData2)
+        cpu.Write(memAddr1, xorData1)
+        cpu.Write(memAddr2, xorData2)
 
         index += DisplayMemoryStride
     }
