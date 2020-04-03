@@ -296,38 +296,43 @@ func shlExecutor(cpu *Processor, opcode uint16) {
 
 
 func drwExecutor(cpu *Processor, opcode uint16) {
+    const (
+        collisionOn    byte = 0x01
+        collisionOff   byte = 0x00
+        collisionIndex byte = 0x0F
+    )
+
     op1, op2 := DecodeArgsMid(opcode)
     op3      := opcode & 0x000F
 
     x, y   := uint16(cpu.V[op1]), uint16(cpu.V[op2])
     offset := y * DisplayWidth + x
-    stride := DisplayWidth / DisplayPixelWidth
     index  := offset / DisplayPixelWidth
 
-    // This is opposite because the MSB corresponds to 
-    // earlier pixel on the display than LSB
-    shiftBits := (offset % DisplayPixelWidth)
-    mask2 := byte(0xFF) >> shiftBits
-    mask1 := ^mask2
-    
-    cpu.V[0x0F] = 0
-    for i := uint16(0); i < op3; i++ {
-        dispData1 := cpu.Read(MemoryDisplayAddr + index) & mask1
-        dispData2 := cpu.Read(MemoryDisplayAddr + index + 1) & mask2
+    shrBits := (offset % DisplayPixelWidth)
+    shlBits := DisplayPixelWidth - shrBits
 
-        spriteData := cpu.Read(cpu.I + i)
-        sprite1 := spriteData & mask1
-        sprite2 := spriteData & mask2
+    cpu.V[collisionIndex] = collisionOff
+    for yOff := uint16(0); yOff < op3; yOff++ {
+        memAddr   := MemoryDisplayAddr + index
+        dispData1 := cpu.Read(memAddr)
+        dispData2 := cpu.Read(memAddr + 1)
 
-        xorData1 := dispData1 ^ (sprite1 >> (DisplayPixelWidth - shiftBits))
-        xorData2 := dispData2 ^ (((dispData2 >> shiftBits) ^ sprite2) << shiftBits)
+        spriteData  := cpu.Read(cpu.I + yOff)
+        spriteData1 := spriteData >> shrBits
+        spriteData2 := spriteData << shlBits
 
+        xorData1 := dispData1 ^ spriteData1
+        xorData2 := dispData2 ^ spriteData2
+
+        // Check for collision - means we erased at least 1 pixel
         if dispData1 & ^xorData1 != 0 || dispData2 & ^xorData2 != 0 {
-            cpu.V[0x0F] = 0x01  // We cause a pixel to be erased
+            cpu.V[collisionIndex] = collisionOn
         }
-        cpu.Write(MemoryDisplayAddr + index, xorData1)
-        cpu.Write(MemoryDisplayAddr + index + 1, xorData2)
 
-        index += stride
+        cpu.Write(memAddr, xorData1)
+        cpu.Write(memAddr + 1, xorData2)
+
+        index += DisplayMemoryStride
     }
 }

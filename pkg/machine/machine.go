@@ -21,11 +21,12 @@ const (
     MemoryDisplayAddr   uint16 = 0x0F00
 
     // Display realted consts
-    DisplayWidth      uint16 = 64
-    DisplayHeight     uint16 = 32
-    DisplaySize       uint16 = DisplayHeight * DisplayWidth
-    DisplayMemorySize uint16 = MemorySize - MemoryDisplayAddr
-    DisplayPixelWidth uint16 = 8
+    DisplayWidth        uint16 = 64
+    DisplayHeight       uint16 = 32
+    DisplaySize         uint16 = DisplayHeight * DisplayWidth
+    DisplayMemorySize   uint16 = MemorySize - MemoryDisplayAddr
+    DisplayPixelWidth   uint16 = 8
+    DisplayMemoryStride uint16 = DisplayWidth / DisplayPixelWidth
 
     // Keys consts
     KeyPressedValue  byte = 1
