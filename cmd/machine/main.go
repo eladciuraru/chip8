@@ -75,7 +75,38 @@ func main() {
     height := int32(machine.DisplayHeight) * int32(args.scale)
     window := NewWindow("CHIP8 - Virtual Machine",
                         width, height, time.Duration(args.clock))
-    // index := uint(0)
+
+    // This is the mapping from CHIP8 input pad to platform keyboard
+    //     1 2 3 C ----> 1 2 3 4
+    //     4 5 6 D ----> Q W E R
+    //     7 8 9 E ----> A S D F
+    //     A 0 B F ----> Z X C V
+    keyMap := map[byte]byte{
+        // First row
+        machine.KeyOne   : '1',
+        machine.KeyTwo   : '2',
+        machine.KeyThree : '3',
+        machine.KeyC     : '4',
+
+        // Second row
+        machine.KeyFour : 'Q',
+        machine.KeyFive : 'W',
+        machine.KeySix  : 'E',
+        machine.KeyD    : 'R',
+
+        // Third row
+        machine.KeySeven : 'A',
+        machine.KeyEigth : 'S',
+        machine.KeyNine  : 'D',
+        machine.KeyE     : 'F',
+
+        // Fourth row
+        machine.KeyA    : 'Z',
+        machine.KeyZero : 'X',
+        machine.KeyB    : 'C',
+        machine.KeyF    : 'V',
+    }
+    fmt.Println(keyMap[1])
 
     fillCell := func(bitmap *Bitmap, x, y, count uint, flag bool) {
         value := byte(0)
@@ -100,30 +131,22 @@ func main() {
     window.WindowLoop(func(win *Window) {
         vm.DoCycle()
 
-        bitmap := win.bitmap
-        // bitmap.buffer = make([]byte, len(win.bitmap.buffer))
+        // From platform keyboard to CHIP8 input pad
+        keyStates := vm.GetKeyStates()
+        for key := range keyStates {
+            keyStates[key] = win.keyboard[keyMap[byte(key)]]
+        }
+        // keyStates[machine.KeyOne] = true
+        vm.SetKeyStates(keyStates)
 
+        // win.bitmap.buffer = make([]byte, len(win.bitmap.buffer))
+
+        // From CHIP8 graphics memory to window bitmap buffer
         for index, state := range vm.GetDisplayState() {
             baseY := uint(index) / uint(machine.DisplayWidth)
             baseX := uint(index) % uint(machine.DisplayWidth)
-            fillCell(bitmap, baseX, baseY, args.scale, state)
+            fillCell(win.bitmap, baseX, baseY, args.scale, state)
         }
-
-        // fmt.Println(index)
-        // if win.keyboard['W'] {
-        //     index -= 64  // up
-        // }
-        // if win.keyboard['A'] {
-        //     index -= 1  // left
-        // }
-        // if win.keyboard['S'] {
-        //     index += 64  // down
-        // }
-        // if win.keyboard['D'] {
-        //     index += 1  // right
-        // }
-        // index++
-        // index = index % 2048
     })
 }
 

@@ -72,6 +72,8 @@ func jmpExecutor(cpu *Processor, opcode uint16) {
 
 
 func callExecutor(cpu *Processor, opcode uint16) {
+    op1 := DecodeArg3(opcode)
+
     // We want to loop around in case of over push
     if cpu.SP == 0 {
         cpu.SP = byte(len(cpu.Stack))
@@ -79,7 +81,7 @@ func callExecutor(cpu *Processor, opcode uint16) {
     cpu.SP -= 1
 
     cpu.Stack[cpu.SP] = cpu.PC
-    cpu.PC = DecodeArg3(opcode)
+    cpu.PC = op1
 }
 
 
@@ -141,17 +143,28 @@ func ldExecutor(cpu *Processor, opcode uint16) {
             op1 := DecodeArg1(opcode)
             switch DecodeArg2(opcode) {
                 case 0x0007: cpu.V[op1] = cpu.DT
-                case 0x000A: // This opcde raised a question,
-                             // how to wait for a keyboard input without blocking
-                             // current go routine.
-                             // 3 options came to mind:
-                             // 1. polling for keypress
-                             // 2. implementing an 'interrupt' that can be activated
-                             //    from the machine API - using a channel
-                             // ^ Both require the code to not run on the main go routine
-                             // 3. 'Freeze' the state of the CPU, and each cycle will
-                             //     traverse the same code path up to here, then 'unfreeze'
-                             //     when the condition is met (pressing a key in this case)
+                // case 0x000A:
+                //     // This opcde raised a question,
+                //     // how to wait for a keyboard input without blocking
+                //     // current go routine.
+                //     // 3 options came to mind:
+                //     // 1. polling for keypress
+                //     // 2. implementing an 'interrupt' that can be activated
+                //     //    from the machine API - using a channel
+                //     // ^ Both require the code to not run on the main go routine
+                //     // 3. 'Freeze' the state of the CPU, and each cycle will
+                //     //     traverse the same code path up to here, then 'unfreeze'
+                //     //     when the condition is met (pressing a key in this case)
+                //     // ^ This was chosen
+                //     cpu.Freeze()
+                //     for i := byte(0); i < KeyF; i++ {
+                //         addr := MemoryKeyboardAddr + uint16(i)
+                //         if cpu.Read(addr) == KeyPressedValue {
+                //             cpu.UnFreeze()
+                //             cpu.V[op1] = i
+                //         }
+                //     }
+
                 case 0x0015: cpu.DT = cpu.V[op1]
                 case 0x0018: cpu.ST = cpu.V[op1]
                 case 0x0029: cpu.I  = MemoryFontTableAddr +

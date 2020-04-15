@@ -14,9 +14,12 @@ type Processor struct {
     ST byte
 
     // Pseduo registers
-    PC    uint16
-    SP    byte
-    Stack [16]uint16  // We could store this on the RAM instead
+    PC     uint16
+    SP     byte
+    Stack  [16]uint16  // We could store this on the RAM instead
+
+    // The freeze mechanic enable the CPU
+    freeze bool
 }
 
 
@@ -29,6 +32,8 @@ func NewProcessor(bus Bus) *Processor {
 
 
 func (cpu *Processor) Cycle() {
+    cpu.HandleTimers()
+
     opcode := cpu.FetchOpcode()
     cpu.AdvancePC()
 
@@ -60,4 +65,31 @@ func (cpu *Processor) Execute(opcode uint16) {
 func (cpu *Processor) AdvancePC() {
     // TODO: Handle edge case
     cpu.PC += InstructionSize
+}
+
+
+func (cpu *Processor) HandleTimers() {
+    if cpu.DT != 0 {
+        cpu.DT -= 1
+    }
+
+    if cpu.ST != 0 {
+        cpu.ST -= 1
+    }
+}
+
+func (cpu *Processor) restorePC() {
+    // TODO: Handle edge case
+    cpu.PC -= InstructionSize
+}
+
+
+func (cpu *Processor) Freeze() {
+    cpu.freeze = true
+    cpu.restorePC()
+}
+
+
+func (cpu *Processor) UnFreeze() {
+    cpu.freeze = false
 }

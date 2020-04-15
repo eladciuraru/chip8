@@ -10,7 +10,10 @@ import (
 const (
     InstructionSize uint16 = 2
     FontSpriteSize  uint16 = 5
+)
 
+
+const (
     // Memory map related consts
     MemorySize          uint16 = 0x1000
     MemoryFontTableAddr uint16 = 0x0000
@@ -19,7 +22,10 @@ const (
     MemoryWorkAreaAddr  uint16 = 0x0ED0
     MemoryKeyboardAddr  uint16 = 0x0EF0
     MemoryDisplayAddr   uint16 = 0x0F00
+)
 
+
+const (
     // Display realted consts
     DisplayWidth        uint16 = 64
     DisplayHeight       uint16 = 32
@@ -27,10 +33,11 @@ const (
     DisplayMemorySize   uint16 = MemorySize - MemoryDisplayAddr
     DisplayPixelWidth   uint16 = 8
     DisplayMemoryStride uint16 = DisplayWidth / DisplayPixelWidth
+)
 
-    // Keys consts
-    KeyPressedValue  byte = 1
-    KeyReleasedValue byte = 0
+
+const (
+    // Keyboard related consts
     KeyZero          byte = iota
     KeyOne
     KeyTwo
@@ -47,13 +54,17 @@ const (
     KeyD
     KeyE
     KeyF
+
+    KeyboardSize     byte = 16
+    KeyPressedValue  byte = 1
+    KeyReleasedValue byte = 0
 )
 
 type VirtualMachine struct {
     cpu      *Processor
     memory   [MemorySize]byte
     display  [DisplaySize]bool
-    keyboard [16]bool
+    keyboard [KeyboardSize]bool
 }
 
 
@@ -172,7 +183,7 @@ func (vm *VirtualMachine) DoCycle() {
 
 
 func (vm *VirtualMachine) SetKeyState(keyIndex byte, pressed bool) bool {
-    if keyIndex >= byte(len(vm.keyboard)) {
+    if keyIndex >= KeyboardSize {
         return false
     }
 
@@ -183,8 +194,27 @@ func (vm *VirtualMachine) SetKeyState(keyIndex byte, pressed bool) bool {
 }
 
 
-func (vm *VirtualMachine) GetKeyStates() [16]bool {
+func (vm *VirtualMachine) GetKeyState(keyIndex byte) bool {
+    if keyIndex >= KeyboardSize {
+        return vm.keyboard[keyIndex]
+    }
+
+    return false
+}
+
+
+func (vm *VirtualMachine) GetKeyStates() [KeyboardSize]bool {
     return vm.keyboard
+}
+
+
+func (vm *VirtualMachine) SetKeyStates(keyStates [KeyboardSize]bool) [KeyboardSize]bool {
+    var prevStates [KeyboardSize]bool
+
+    copy(prevStates[:], vm.keyboard[:])
+    copy(vm.keyboard[:], keyStates[:])
+
+    return prevStates
 }
 
 
