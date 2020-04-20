@@ -1,11 +1,11 @@
 package main
 
 import (
-	"flag"
-	"fmt"
-	"os"
+    "flag"
+    "fmt"
+    "os"
 
-	"github.com/eladciuraru/chip8/pkg/disasm"
+    "github.com/eladciuraru/chip8/pkg/disasm"
 )
 
 type Arguments struct {
@@ -18,11 +18,11 @@ type Arguments struct {
 
 func parseArgs() Arguments {
     const (
-		pathHelp   = "Path to file contains CHIP-8 compiled instructions"
-		baseHelp   = "The base address of the first instruction"
-		labelsHelp = "Generate labels for control flows"
-		formatHelp = "Format string for each line in the disassembly, read docs for more"
-		shortHelp  = " (shorthand)"
+        pathHelp   = "Path to file contains CHIP-8 compiled instructions"
+        baseHelp   = "The base address of the first instruction"
+        labelsHelp = "Generate labels for control flows - not implemented"
+        formatHelp = "Format string for each line in the disassembly, read docs for more - not implemented"
+        shortHelp  = " (shorthand)"
     )
 
     var args Arguments
@@ -77,11 +77,6 @@ func main() {
     if err != nil {
         panic(err)
     }
-
-    // fmt.Printf("%#v\n", dis)
-    // fmt.Println(dis.InstAt(0))
-    // fmt.Println(dis.InstAt(2))
-    // fmt.Println(dis.InstAt(3))
 
     for iter := dis.Iterator(); iter.Next(); {
         fmt.Println(iter.Value())

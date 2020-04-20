@@ -86,15 +86,17 @@ func FromFile(filename string, options ...Option) (*Disasm, error) {
 }
 
 
-func (dis *Disasm) InstAt(index uint) (string, error) {
+func (dis *Disasm) InstAt(index uint) (*Instruction, error) {
     if index < 0 || index >= uint(len(dis.romData) - 1) {
-        return "", fmt.Errorf("index %d out of rom range", index)
+        return nil, fmt.Errorf("index %d out of rom range", index)
     }
 
     opcode := uint16(dis.romData[index]) << 8 +
               uint16(dis.romData[index + 1])
+    inst   := ParseOpcode(opcode)
+    inst.Address = dis.baseAddr + index
 
-    return ParseOpcode(opcode), nil
+    return inst, nil
 }
 
 
@@ -125,7 +127,7 @@ func (iter *iterator) Next() bool {
 }
 
 
-func (iter *iterator) Value() string {
+func (iter *iterator) Value() *Instruction {
     // No need to check for error since we have a check at 'Next' function
     inst, _  := iter.dis.InstAt(iter.index)
 

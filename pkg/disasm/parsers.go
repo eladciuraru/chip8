@@ -1,8 +1,6 @@
 package disasm
 
-import "fmt"
-
-func ParseOpcode(opcode uint16) string {
+func ParseOpcode(opcode uint16) *Instruction {
     parser, ok := parsersMap[decodeOpcode(opcode)]
     if !ok {
         parser = defaultParser
@@ -12,12 +10,13 @@ func ParseOpcode(opcode uint16) string {
 }
 
 
-func defaultParser(opcode uint16) string {
-    return fmt.Sprintf("%#04x", opcode)
+func defaultParser(opcode uint16) *Instruction {
+    return newInstruction(opcode, "")
 }
 
 
-type instParser func(uint16) string
+type instParser func(uint16) *Instruction
+
 
 // decoded opcode to instParser function
 var parsersMap = map[uint16]instParser{
@@ -58,182 +57,255 @@ var parsersMap = map[uint16]instParser{
 }
 
 
-func clsParser(opcode uint16) string {
-    return "CLS"
+func clsParser(opcode uint16) *Instruction {
+    return newInstruction(opcode, MnemonicCLS)
 }
 
 
-func retParser(opcode uint16) string {
-    return "RET"
+func retParser(opcode uint16) *Instruction {
+    return newInstruction(opcode, MnemonicRET)
 }
 
 
-func jmpParser(opcode uint16) string {
-    var args string
+func jmpParser(opcode uint16) *Instruction {
+    inst := newInstruction(opcode, MnemonicJMP)
     switch decodeMajor(opcode) {
         case 0x1000:
-            args = fmt.Sprintf("%04Xh", decodeArg3(opcode))
+            inst.Operand1 = Immediate(decodeArg3(opcode))
 
         case 0xB000:
-            args = fmt.Sprintf("V0, %04Xh", decodeArg3(opcode))
+            inst.Operand1 = RegisterV0
+            inst.Operand2 = Immediate(decodeArg3(opcode))
     }
 
-    return fmt.Sprintf("JMP   %s", args)
+    return inst
 }
 
 
-func callParser(opcode uint16) string {
-    return fmt.Sprintf("CALL  %04Xh", decodeArg3(opcode))
+func callParser(opcode uint16) *Instruction {
+    inst := newInstruction(opcode, MnemonicCALL)
+    inst.Operand1 = Immediate(decodeArg3(opcode))
+
+    return inst
 }
 
 
-func seParser(opcode uint16) string {
-    var args string
+func seParser(opcode uint16) *Instruction {
+    inst := newInstruction(opcode, MnemonicSE)
     switch decodeMajor(opcode) {
         case 0x3000:
-            args = fmt.Sprintf("V%x, %02Xh", decodeArg1(opcode),
-                               decodeArg2(opcode))
+            inst.Operand1 = vRegisters[decodeArg1(opcode)]
+            inst.Operand2 = Immediate(decodeArg2(opcode))
 
         case 0x5000:
             arg1, arg2 := decodeArgsMid(opcode)
-            args = fmt.Sprintf("V%x, V%x", arg1, arg2)
+            inst.Operand1 = vRegisters[arg1]
+            inst.Operand2 = vRegisters[arg2]
     }
 
-    return fmt.Sprintf("SE    %s", args)
+    return inst
 }
 
 
-func sneParser(opcode uint16) string {
-    var args string
+func sneParser(opcode uint16) *Instruction {
+    inst := newInstruction(opcode, MnemonicSNE)
     switch decodeMajor(opcode) {
         case 0x4000:
-            args = fmt.Sprintf("V%x, %02Xh", decodeArg1(opcode),
-                               decodeArg2(opcode))
+            inst.Operand1 = vRegisters[decodeArg1(opcode)]
+            inst.Operand2 = Immediate(decodeArg2(opcode))
 
         case 0x9000:
             arg1, arg2 := decodeArgsMid(opcode)
-            args = fmt.Sprintf("V%x, V%x", arg1, arg2)
+            inst.Operand1 = vRegisters[arg1]
+            inst.Operand2 = vRegisters[arg2]
     }
 
-    return fmt.Sprintf("SNE   %s", args)
+    return inst
 }
 
 
-func ldParser(opcode uint16) string {
-    var args string
+func ldParser(opcode uint16) *Instruction {
+    inst := newInstruction(opcode, MnemonicLD)
     switch decodeMajor(opcode) {
         case 0x6000:
-            args = fmt.Sprintf("V%x, %02Xh", decodeArg1(opcode),
-                               decodeArg2(opcode))
+            inst.Operand1 = vRegisters[decodeArg1(opcode)]
+            inst.Operand2 = Immediate(decodeArg2(opcode))
 
         case 0x8000:
             arg1, arg2 := decodeArgsMid(opcode)
-            args = fmt.Sprintf("V%x, V%x", arg1, arg2)
+            inst.Operand1 = vRegisters[arg1]
+            inst.Operand2 = vRegisters[arg2]
 
         case 0xA000:
-            args = fmt.Sprintf("I, %04Xh", decodeArg3(opcode))
+            inst.Operand1 = RegisterI
+            inst.Operand2 = Immediate(decodeArg3(opcode))
 
         case 0xF000:
             switch decodeArg2(opcode) {
-                case 0x0007: args = fmt.Sprintf("V%x, DT",  decodeArg1(opcode))
-                case 0x000A: args = fmt.Sprintf("V%x, K",   decodeArg1(opcode))
-                case 0x0015: args = fmt.Sprintf("DT, V%x",  decodeArg1(opcode))
-                case 0x0018: args = fmt.Sprintf("ST, V%x",  decodeArg1(opcode))
-                case 0x0029: args = fmt.Sprintf("F, V%x",   decodeArg1(opcode))
-                case 0x0033: args = fmt.Sprintf("B, V%x",   decodeArg1(opcode))
-                case 0x0055: args = fmt.Sprintf("[I], V%x", decodeArg1(opcode))
-                case 0x0065: args = fmt.Sprintf("V%x, [I]", decodeArg1(opcode))
+                case 0x0007:
+                    inst.Operand1 = vRegisters[decodeArg1(opcode)]
+                    inst.Operand2 = RegisterDT
+
+                case 0x000A:
+                    inst.Operand1 = vRegisters[decodeArg1(opcode)]
+                    inst.Operand2 = RegisterKeyPress
+
+                case 0x0015:
+                    inst.Operand1 = RegisterDT
+                    inst.Operand2 = vRegisters[decodeArg1(opcode)]
+
+                case 0x0018:
+                    inst.Operand1 = RegisterST
+                    inst.Operand2 = vRegisters[decodeArg1(opcode)]
+
+                case 0x0029:
+                    inst.Operand1 = RegisterFont
+                    inst.Operand2 = vRegisters[decodeArg1(opcode)]
+
+                case 0x0033:
+                    inst.Operand1 = RegisterBCD
+                    inst.Operand2 = vRegisters[decodeArg1(opcode)]
+
+                case 0x0055:
+                    inst.Operand1 = Pointer(RegisterI)
+                    inst.Operand2 = vRegisters[decodeArg1(opcode)]
+
+                case 0x0065:
+                    inst.Operand1 = vRegisters[decodeArg1(opcode)]
+                    inst.Operand2 = Pointer(RegisterI)
             }
     }
 
-    return fmt.Sprintf("LD    %s", args)
+    return inst
 }
 
 
-func addParser(opcode uint16) string {
-    var args string
+func addParser(opcode uint16) *Instruction {
+    inst := newInstruction(opcode, MnemonicADD)
     switch decodeMajor(opcode) {
         case 0x7000:
-            args = fmt.Sprintf("V%x, %02Xh", decodeArg1(opcode),
-                               decodeArg2(opcode))
+            inst.Operand1 = vRegisters[decodeArg1(opcode)]
+            inst.Operand2 = Immediate(decodeArg2(opcode))
 
         // There is no need to check lower opcode part when we have only 1 option
         // because of how the map to parser func works
         case 0xF000:
-            args = fmt.Sprintf("I, V%x", decodeArg1(opcode))
+            inst.Operand1 = RegisterI
+            inst.Operand2 = vRegisters[decodeArg1(opcode)]
 
         case 0x8000:
             arg1, arg2 := decodeArgsMid(opcode)
-            args = fmt.Sprintf("V%x, V%x", arg1, arg2)
+            inst.Operand1 = vRegisters[arg1]
+            inst.Operand2 = vRegisters[arg2]
     }
 
-    return fmt.Sprintf("ADD   %s", args)
+    return inst
 }
 
 
-func rndParser(opcode uint16) string {
-    return fmt.Sprintf("RND   V%x, %02Xh", decodeArg1(opcode), decodeArg2(opcode))
+func rndParser(opcode uint16) *Instruction {
+    inst := newInstruction(opcode, MnemonicRND)
+    inst.Operand1 = vRegisters[decodeArg1(opcode)]
+    inst.Operand2 = Immediate(decodeArg2(opcode))
+
+    return inst
 }
 
 
-func drwParser(opcode uint16) string {
-    arg1, arg2 := decodeArgsMid(opcode)
-    arg3 := opcode & 0x000F  // The only instruction with this extra arg
+func drwParser(opcode uint16) *Instruction {
+    inst := newInstruction(opcode, MnemonicDRW)
 
-    return fmt.Sprintf("DRW   V%x, V%x, %X", arg1, arg2, arg3)
+    arg1, arg2   := decodeArgsMid(opcode)
+    inst.Operand1 = vRegisters[arg1]
+    inst.Operand2 = vRegisters[arg2]
+    inst.Operand3 = Immediate(opcode & 0x000F)  // The only instruction with this extra operand
+
+    return inst
 }
 
 
-func skpParser(opcode uint16) string {
-    return fmt.Sprintf("SKP   V%x", decodeArg1(opcode))
+func skpParser(opcode uint16) *Instruction {
+    inst := newInstruction(opcode, MnemonicSKP)
+    inst.Operand1 = vRegisters[decodeArg1(opcode)]
+
+    return inst
 }
 
 
-func sknpParser(opcode uint16) string {
-    return fmt.Sprintf("SKNP  V%x", decodeArg1(opcode))
+func sknpParser(opcode uint16) *Instruction {
+    inst := newInstruction(opcode, MnemonicSKNP)
+    inst.Operand1 = vRegisters[decodeArg1(opcode)]
+
+    return inst
 }
 
 
-func orParser(opcode uint16) string {
-    arg1, arg2 := decodeArgsMid(opcode)
+func orParser(opcode uint16) *Instruction {
+    inst := newInstruction(opcode, MnemonicOR)
 
-    return fmt.Sprintf("OR    V%x, V%x", arg1, arg2)
+    arg1, arg2   := decodeArgsMid(opcode)
+    inst.Operand1 = vRegisters[arg1]
+    inst.Operand2 = vRegisters[arg2]
+
+    return inst
 }
 
 
-func andParser(opcode uint16) string {
-    arg1, arg2 := decodeArgsMid(opcode)
+func andParser(opcode uint16) *Instruction {
+    inst := newInstruction(opcode, MnemonicAND)
 
-    return fmt.Sprintf("AND   V%x, V%x", arg1, arg2)
+    arg1, arg2   := decodeArgsMid(opcode)
+    inst.Operand1 = vRegisters[arg1]
+    inst.Operand2 = vRegisters[arg2]
+
+    return inst
 }
 
 
-func xorParser(opcode uint16) string {
-    arg1, arg2 := decodeArgsMid(opcode)
+func xorParser(opcode uint16) *Instruction {
+    inst := newInstruction(opcode, MnemonicXOR)
 
-    return fmt.Sprintf("XOR   V%x, V%x", arg1, arg2)
+    arg1, arg2   := decodeArgsMid(opcode)
+    inst.Operand1 = vRegisters[arg1]
+    inst.Operand2 = vRegisters[arg2]
+
+    return inst
 }
 
 
-func subParser(opcode uint16) string {
-    arg1, arg2 := decodeArgsMid(opcode)
+func subParser(opcode uint16) *Instruction {
+    inst := newInstruction(opcode, MnemonicSUB)
 
-    return fmt.Sprintf("SUB   V%x, V%x", arg1, arg2)
+    arg1, arg2   := decodeArgsMid(opcode)
+    inst.Operand1 = vRegisters[arg1]
+    inst.Operand2 = vRegisters[arg2]
+
+    return inst
 }
 
 
-func shrParser(opcode uint16) string {
-    return fmt.Sprintf("SHR   V%x", decodeArg1(opcode))
+func shrParser(opcode uint16) *Instruction {
+    inst := newInstruction(opcode, MnemonicSHR)
+    inst.Operand1 = vRegisters[decodeArg1(opcode)]
+
+    return inst
 }
 
 
-func subnParser(opcode uint16) string {
-    arg1, arg2 := decodeArgsMid(opcode)
+func subnParser(opcode uint16) *Instruction {
+    inst := newInstruction(opcode, MnemonicSUBN)
 
-    return fmt.Sprintf("SUBN  V%x, V%x", arg1, arg2)
+    arg1, arg2   := decodeArgsMid(opcode)
+    inst.Operand1 = vRegisters[arg1]
+    inst.Operand2 = vRegisters[arg2]
+
+    return inst
 }
 
 
-func shlParser(opcode uint16) string {
-    return fmt.Sprintf("SHL   V%x", decodeArg1(opcode))
+func shlParser(opcode uint16) *Instruction {
+    inst := newInstruction(opcode, MnemonicSHL)
+    inst.Operand1 = vRegisters[decodeArg1(opcode)]
+
+    return inst
 }

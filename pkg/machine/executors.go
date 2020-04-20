@@ -178,13 +178,15 @@ func ldExecutor(cpu *Processor, opcode uint16) {
                     cpu.Write(addr + 2, value % 10)  // ones digit
 
                 case 0x0055:
-                    for i := 0; i < len(cpu.V); i++ {
-                        cpu.Write(cpu.I + uint16(i), cpu.V[i])
+                    op1 := DecodeArg1(opcode)
+                    for i := uint16(0); i <= op1; i++ {
+                        cpu.Write(cpu.I + i, cpu.V[i])
                     }
 
                 case 0x0065:
-                    for i := 0; i < len(cpu.V); i++ {
-                        cpu.V[i] = cpu.Read(cpu.I + uint16(i))
+                    op1 := DecodeArg1(opcode)
+                    for i := uint16(0); i <= op1; i++ {
+                        cpu.V[i] = cpu.Read(cpu.I + i)
                     }
             }
     }
